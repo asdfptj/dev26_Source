@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 업로드 및 페이징</title>
+
+    <style>
+        body {
+             font-family: Arial, sans-serif;
+             margin: 0;
+             padding: 0;
+        }
+        #csvForm {
+             display:flex;
+             margin: 10px auto;
+             max-width: 300px;
+        }
+        .uploadBtn {
+            width:130px;
+            padding:3px 3px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .uploadBtn:active {
+            background-color: #45a049;
+        }
+
+
+        #tableContainer {
+            max-height:800px;
+            overflow-x: auto;
+            padding: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            white-space: nowrap;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .pagination button[disabled] {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <form id="csvForm" enctype="multipart/form-data">
+        <input type="file" name="csvFile" id="csvFile" accept=".csv">
+        <button type="button" class="uploadBtn" onclick="uploadCSV()">CSV 업로드</button>
+    </form>
+
+    <div id="tableContainer">
+    </div>
+
+
+    <div class="pagination" id="pagination">
+        <button id="firstPageBtn" onclick="goToFirstPage()" disabled>&lt;&lt;</button>
+        <button id="prevPageBtn" onclick="prevPage()" disabled>&lt;</button>
+        <span id="currentPage">1</span> / <span id="totalPages">1</span>
+        <button id="nextPageBtn" onclick="nextPage()" disabled>&gt;</button>
+        <button id="lastPageBtn" onclick="goToLastPage()" disabled>&gt;&gt;</button>
+    </div>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        var pageSize = 1000;
+        var currentPage = 1;
+        var totalPages = 1;
+
+        function uploadCSV() {
+            var formData = new FormData($('#csvForm')[0]);
+            formData.append('page', currentPage);
+
+            $.ajax({
+                type: 'POST',
+                url: 'csvUpload.php',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    var data = JSON.parse(response);
+                    totalPages = data.totalPages;
+                    displayTable(data.tableHtml);
+                    updatePagination(data.hasNextPage);
+                },
+                error: function (error) {
+                    console.error('CSV 파일 업로드 중 오류 발생:', error);
+                }
+            });
+        }
+
+        function displayTable(tableHtml) {
+            $('#tableContainer').html(tableHtml);
+            $('#currentPage').text(currentPage);
+            $('#totalPages').text(totalPages);
+        }
+
+        function updatePagination(hasNextPage) {
+            $('#firstPageBtn').prop('disabled', currentPage === 1);
+            $('#prevPageBtn').prop('disabled', currentPage === 1);
+            $('#nextPageBtn').prop('disabled', !hasNextPage);
+            $('#lastPageBtn').prop('disabled', !hasNextPage);
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                uploadCSV();
+            }
+        }
+
+        function nextPage() {
+            currentPage++;
+            uploadCSV();
+        }
+
+        function goToFirstPage() {
+            goToPage(1);
+        }
+
+        function goToLastPage() {
+            goToPage(totalPages);
+        }
+
+        function goToPage(page) {
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                uploadCSV();
+            }
+        }
+
+        $(document).ready(function () {
+            uploadCSV();
+        });
+    </script>
+</body>
+</html>
